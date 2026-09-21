@@ -207,7 +207,7 @@
         <!-- LOGIN VIEW -->
         <div id="view-standard" class="login-view active">
             <div class="glass-card">
-                <div class="ig-logo">my-instaPET</div>
+                <div class="ig-logo">My-instaCAT</div>
                 <input type="email" id="loginEmail" class="login-input" placeholder="Email address">
                 <div class="password-container">
                     <input type="password" id="loginPassword" class="login-input" placeholder="Password">
@@ -226,13 +226,13 @@
                     <span style="font-size: 0.85rem; color: rgba(255,255,255,0.8);">Don't have an account? <span class="text-blue" onclick="toggleLoginView('signup')">Sign up.</span></span>
                 </div>
             </div>
-            <div class="signup-footer">my-instaPET Project</div>
+            <div class="signup-footer">My-instaCAT Project</div>
         </div>
 
         <!-- SIGNUP VIEW -->
         <div id="view-signup" class="login-view">
             <div class="glass-card">
-                <div class="ig-logo" style="font-size: 2.5rem;">my-instaPET</div>
+                <div class="ig-logo" style="font-size: 2.5rem;">My-instaCAT</div>
                 <p class="text-center text-white-50 fw-semibold mb-3" style="font-size: 0.8rem;">สมัครสมาชิกเพื่อแบ่งปันรูปสัตว์เลี้ยงของคุณ</p>
                 <input type="email" id="signupEmail" class="login-input" placeholder="Email">
                 <input type="text" id="signupFullName" class="login-input" placeholder="Full Name">
@@ -462,7 +462,7 @@
                 Swal.fire({
                     icon: 'success',
                     title: 'สมัครสมาชิกสำเร็จ!',
-                    text: `ยินดีต้อนรับคุณ ${fullName} เข้าสู่ my-instaPET`,
+                    text: `ยินดีต้อนรับคุณ ${fullName} เข้าสู่ My-instaCAT`,
                     confirmButtonColor: '#ff3366'
                 });
             } catch (err) {
@@ -658,7 +658,7 @@
                 container.innerHTML = '';
 
                 if (snapshot.empty) {
-                    container.innerHTML = `<div class="text-center text-muted mt-5"><i class="fa-solid fa-paw fs-1 mb-2"></i><p>ยังไม่มีโพสต์ ลองแชร์รูปสัตว์เลี้ยงเป็นคนแรก!</p></div>`;
+                    container.innerHTML = `<div class="text-center text-muted mt-5"><i class="fa-solid fa-paw fs-1 mb-2"></i><p>ยังไม่มีโพสต์ ลองแชร์รูปแมวเป็นคนแรก!</p></div>`;
                     return;
                 }
 
