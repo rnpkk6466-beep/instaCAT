@@ -26,7 +26,7 @@
             display: flex; justify-content: center; 
         }
         
-        /* LOGIN & SIGNUP SECTION (ซ่อนไว้ก่อนเป็นค่าเริ่มต้น) */
+        /* LOGIN & SIGNUP SECTION */
         #login-section { 
             display: none; width: 100%; max-width: 480px; height: 100vh; 
             background: linear-gradient(135deg, #1e1e2f 0%, #0f172a 100%); 
@@ -173,7 +173,7 @@
             box-shadow: 0 4px 12px rgba(255, 51, 102, 0.3);
         }
 
-        /* MAIN APP CONTAINER (เปิดแสดงเป็นหน้าหลักเริ่มต้น) */
+        /* MAIN APP CONTAINER */
         #main-app-section { 
             display: flex; width: 100%; max-width: 480px; height: 100vh; 
             background: linear-gradient(180deg, #fff0f3 0%, #ffe3e8 100%); 
@@ -398,9 +398,15 @@
 
                 <!-- PROFILE AVATAR & STATS SECTION -->
                 <div class="d-flex align-items-center mb-3">
-                    <div class="avatar-gradient-ring me-3">
-                        <div class="post-avatar" id="profileAvatar" style="width: 72px; height: 72px; font-size: 2rem; border: 3px solid #ffffff; background: linear-gradient(45deg, #ff3366, #7928ca);">U</div>
+                    <div class="avatar-gradient-ring me-3 position-relative" style="cursor: pointer;" onclick="document.getElementById('profilePicInput').click()" title="คลิกเพื่อเปลี่ยนรูปโปรไฟล์">
+                        <div class="post-avatar overflow-hidden" id="profileAvatar" style="width: 72px; height: 72px; font-size: 2rem; border: 3px solid #ffffff; background: linear-gradient(45deg, #ff3366, #7928ca);">U</div>
+                        <div class="position-absolute bottom-0 end-0 bg-white rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 24px; height: 24px; border: 1.5px solid #ff3366;">
+                            <i class="fa-solid fa-camera text-danger" style="font-size: 0.65rem;"></i>
+                        </div>
                     </div>
+                    <!-- Hidden File Input for Profile Picture -->
+                    <input type="file" id="profilePicInput" accept="image/*" style="display: none;" onchange="uploadProfilePicture(this)">
+
                     <div class="d-flex justify-content-around flex-grow-1 text-center">
                         <div>
                             <div class="profile-stat-number" id="profilePostCount">0</div>
@@ -429,7 +435,7 @@
 
                 <!-- BUTTONS -->
                 <div class="d-flex gap-2 mb-3">
-                    <button class="btn btn-edit-profile-colorful btn-sm flex-grow-1" style="border-radius: 10px;" onclick="Swal.fire({icon:'info', title:'แก้ไขโปรไฟล์', text:'ระบบแก้ไขโปรไฟล์จะเปิดให้บริการเร็วๆ นี้', confirmButtonColor:'#ff3366'})"><i class="fa-solid fa-pen-to-square me-1"></i> Edit Profile</button>
+                    <button class="btn btn-edit-profile-colorful btn-sm flex-grow-1" style="border-radius: 10px;" onclick="document.getElementById('profilePicInput').click()"><i class="fa-solid fa-image me-1"></i> Change Avatar</button>
                     <button class="btn btn-logout-colorful btn-sm fw-bold px-3" style="border-radius: 10px;" onclick="processLogout()"><i class="fa-solid fa-right-from-bracket me-1"></i> Log Out</button>
                 </div>
 
@@ -672,9 +678,19 @@
                 const file = fileInput.files[0];
                 const compressedBase64 = await compressAndResizeImage(file, 800, 0.7);
 
+                // ดึงรูปโปรไฟล์ล่าสุดจาก Firestore
+                let authorPhoto = user.photoURL || null;
+                try {
+                    const uDoc = await db.collection('users').doc(user.uid).get();
+                    if (uDoc.exists && uDoc.data().photoURL) {
+                        authorPhoto = uDoc.data().photoURL;
+                    }
+                } catch(e) {}
+
                 await db.collection('posts').add({
                     uid: user.uid,
                     authorName: user.displayName || user.email.split('@')[0],
+                    authorPhoto: authorPhoto,
                     imageUrl: compressedBase64,
                     caption: caption,
                     likes: [],
@@ -791,6 +807,10 @@
                     const isOwner = user && post.uid === user.uid;
                     const initial = (post.authorName || 'U').charAt(0).toUpperCase();
 
+                    const avatarHtml = post.authorPhoto 
+                        ? `<img src="${post.authorPhoto}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">` 
+                        : initial;
+
                     const heartClass = isLiked ? 'fa-solid fa-heart text-danger' : 'fa-regular fa-heart';
                     const deleteBtnHtml = isOwner 
                         ? `<i class="fa-regular fa-trash-can text-danger ms-auto fs-5" style="cursor:pointer;" title="ลบโพสต์" onclick="deletePost('${postId}')"></i>` 
@@ -808,7 +828,7 @@
                     container.innerHTML += `
                         <div class="post-card" id="post-${postId}">
                             <div class="d-flex align-items-center mb-2">
-                                <div class="post-avatar me-2">${initial}</div>
+                                <div class="post-avatar me-2 overflow-hidden">${avatarHtml}</div>
                                 <div class="fw-bold fs-6">${post.authorName}</div>
                                 ${deleteBtnHtml}
                             </div>
@@ -838,6 +858,8 @@
                         </div>
                     `;
                 });
+            }, (error) => {
+                console.error("Firestore onSnapshot error:", error);
             });
         }
 
@@ -904,7 +926,7 @@
             document.getElementById('activity-modal').classList.remove('active');
         }
 
-        // 10. INSTAGRAM PROFILE SYSTEM
+        // 10. PROFILE & AVATAR UPLOAD SYSTEM (เก็บบันทึกลง Firestore)
         async function openProfileModal() {
             if (!checkAuthOrPrompt()) return;
 
@@ -914,7 +936,25 @@
             const initial = name.charAt(0).toUpperCase();
 
             document.getElementById('profileHeaderHandle').innerText = handle;
-            document.getElementById('profileAvatar').innerText = initial;
+            
+            // ดึงรูปโปรไฟล์จาก Firestore ก่อน หากไม่มีค่อยใช้รูปจาก Auth
+            let photoURL = user.photoURL;
+            try {
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                if (userDoc.exists && userDoc.data().photoURL) {
+                    photoURL = userDoc.data().photoURL;
+                }
+            } catch(e) {
+                console.error("Error fetching user photo:", e);
+            }
+
+            const profileAvatarEl = document.getElementById('profileAvatar');
+            if (photoURL) {
+                profileAvatarEl.innerHTML = `<img src="${photoURL}" style="width: 100%; height: 100%; object-fit: cover;">`;
+            } else {
+                profileAvatarEl.innerHTML = initial;
+            }
+
             document.getElementById('profileName').innerText = name;
             document.getElementById('profileEmail').innerText = user.email;
 
@@ -940,6 +980,55 @@
             }
 
             document.getElementById('profile-modal').classList.add('active');
+        }
+
+        async function uploadProfilePicture(input) {
+            if (!input.files || !input.files[0]) return;
+            const user = auth.currentUser;
+            if (!user) return;
+
+            try {
+                Swal.fire({
+                    title: 'กำลังอัปโหลดรูปโปรไฟล์...',
+                    allowOutsideClick: false,
+                    didOpen: () => Swal.showLoading()
+                });
+
+                const file = input.files[0];
+                // ย่อขนาดรูปเหลือ 200px
+                const compressedBase64 = await compressAndResizeImage(file, 200, 0.6);
+
+                // บันทึกรูปภาพ Base64 ลง Firestore ในคอลเลกชัน 'users'
+                await db.collection('users').doc(user.uid).set({
+                    photoURL: compressedBase64,
+                    displayName: user.displayName || user.email.split('@')[0]
+                }, { merge: true });
+
+                try {
+                    await user.updateProfile({ photoURL: compressedBase64 });
+                } catch(e) {}
+
+                // แสดงรูปโปรไฟล์ใน UI ทันที
+                const profileAvatarEl = document.getElementById('profileAvatar');
+                if (profileAvatarEl) {
+                    profileAvatarEl.innerHTML = `<img src="${compressedBase64}" style="width: 100%; height: 100%; object-fit: cover;">`;
+                }
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'อัปโหลดรูปโปรไฟล์เรียบร้อย!',
+                    confirmButtonColor: '#ff3366'
+                });
+            } catch (err) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'เกิดข้อผิดพลาด',
+                    text: err.message,
+                    confirmButtonColor: '#ff3366'
+                });
+            } finally {
+                input.value = '';
+            }
         }
 
         function closeProfileModal() {
